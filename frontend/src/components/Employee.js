@@ -17,6 +17,7 @@ const EmployeeTable = () => {
   const [email, setEmail] = useState('');
   const [DOB, setDOB] = useState(''); 
   const [salary, setSalary] = useState('');
+  const [salaryError, setSalaryError] = useState('');
   const [departmentCode, setDepartmentCode] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterBy, setFilterBy] = useState('name');
@@ -90,8 +91,20 @@ const EmployeeTable = () => {
     setDOB('');
     setSalary('');
     setDepartmentCode('');
+    setSalaryError('');
   };
 
+  const calculateAge = (dob) => {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+  
   const handleSave = () => {
     if (!firstName || !lastName || !email ||!salary || !departmentCode) {
       Swal.fire({
@@ -102,6 +115,13 @@ const EmployeeTable = () => {
       return;
     }
   
+    if (parseFloat(salary) < 0) {
+      setSalaryError('Salary cannot be a negative value.');
+      return;
+    } else {
+      setSalaryError(''); // Clear error if valid
+    }
+    
     if (isEditing) {
       axios.put(`https://localhost:7091/api/Employee/${selectedEmployee.employeeID}`, {
         employeeID: selectedEmployee.employeeID,
@@ -174,7 +194,7 @@ const EmployeeTable = () => {
 
   const downloadPDF = () => {
     const doc = new jsPDF();
-    const tableColumn = ["Employee ID", "First Name", "Last Name", "Email", "Salary", "Date of Birth", "Department Name"];
+    const tableColumn = ["Employee ID", "First Name", "Last Name", "Email", "Salary", "Age", "Department Name"];
     const tableRows = [];
 
     filteredEmployees.forEach(employee => {
@@ -184,7 +204,7 @@ const EmployeeTable = () => {
         employee.lastName,
         employee.email,
         employee.salary,
-        employee.dob,
+        calculateAge(employee.dob),
         departments.find(department => department.departmentCode === employee.departmentCode)?.departmentName || 'N/A'
       ];
       tableRows.push(employeeData);
@@ -216,7 +236,7 @@ const EmployeeTable = () => {
           </button>
           <button
             onClick={()=> navigate('/employeeSummary')}
-            className="px-4 py-2 text-white rounded-md shadow-md hover:bg-orange-500 bg-orange-400"
+            className="px-4 py-2 text-white bg-orange-400 rounded-md shadow-md hover:bg-orange-500"
           >
             Summary
           </button>
@@ -250,7 +270,7 @@ const EmployeeTable = () => {
               <th className="px-4 py-2">Last Name</th>
               <th className="px-4 py-2">Email</th>
               <th className="px-4 py-2">Salary</th>
-              <th className='px-4 py-2'>Date of Birth</th> 
+              <th className='px-4 py-2'>Age</th> 
               <th className="px-4 py-2">Department Name</th>
               <th className="px-4 py-2">Actions</th>
             </tr>
@@ -263,7 +283,7 @@ const EmployeeTable = () => {
                 <td className="px-4 py-2">{employee.lastName}</td>
                 <td className="px-4 py-2">{employee.email}</td>
                 <td className="px-4 py-2">{employee.salary}</td>
-                <td className="px-4 py-2">{employee.dob}</td> 
+                <td className="px-4 py-2">{calculateAge(employee.dob)}</td> 
                 <td className="px-4 py-2">
                   {
                     departments.find(department => department.departmentCode === employee.departmentCode)?.departmentName || 'N/A'
@@ -344,6 +364,7 @@ const EmployeeTable = () => {
                 type="date"
                 value={DOB}
                 onChange={(e) => setDOB(e.target.value)}
+                max={new Date().toISOString().split('T')[0]}
                 className="block w-full p-2 mt-1 border border-gray-300 rounded-md"
               />
             </div>
@@ -355,7 +376,9 @@ const EmployeeTable = () => {
                 onChange={(e) => setSalary(e.target.value)}
                 placeholder="Enter salary"
                 className="block w-full p-2 mt-1 border border-gray-300 rounded-md"
+                
               />
+              {salaryError && <p className="text-red-500">{salaryError}</p>}
             </div>
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Department</label>
